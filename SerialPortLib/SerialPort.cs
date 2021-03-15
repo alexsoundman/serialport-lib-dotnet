@@ -85,7 +85,9 @@ namespace SerialPortLib
         private StopBits _stopBits = StopBits.One;
         private Parity _parity = Parity.None;
         private DataBits _dataBits = DataBits.Eight;
-
+        private bool _useDTR = false;
+        private int _readTimeout = 10;
+        private int _bytesThreshold = 1;
         // Read/Write error state variable
         private bool gotReadWriteError = true;
 
@@ -200,9 +202,9 @@ namespace SerialPortLib
         /// <param name="stopBits">Stopbits.</param>
         /// <param name="parity">Parity.</param>
         /// <param name="dataBits">Databits.</param>
-        public void SetPort(string portName, int baudRate = 115200, StopBits stopBits = StopBits.One, Parity parity = Parity.None, DataBits dataBits = DataBits.Eight)
+        public void SetPort(string portName, int baudRate = 115200, StopBits stopBits = StopBits.One, Parity parity = Parity.None, DataBits dataBits = DataBits.Eight, bool useDTR = false)
         {
-            if (_portName != portName || _baudRate != baudRate || stopBits != _stopBits || parity != _parity || dataBits != _dataBits)
+            if (_portName != portName || _baudRate != baudRate || stopBits != _stopBits || parity != _parity || dataBits != _dataBits || useDTR!= _useDTR)
             {
                 // Change Parameters request
                 // Take into account immediately the new connection parameters
@@ -212,12 +214,17 @@ namespace SerialPortLib
                 _stopBits = stopBits;
                 _parity = parity;
                 _dataBits = dataBits;
+                _useDTR = useDTR;
                 if (IsConnected)
                 {
                     Connect();      // Take into account immediately the new connection parameters
                 }
                 LogDebug(string.Format("Port parameters changed (port name {0} / baudrate {1} / stopbits {2} / parity {3} / databits {4})", portName, baudRate, stopBits, parity, dataBits));
             }
+        }
+
+        public void SetUseDTR(bool useDTR) {
+            _useDTR = useDTR;
         }
 
         /// <summary>
@@ -282,7 +289,9 @@ namespace SerialPortLib
                         _serialPort.StopBits = _stopBits;
                         _serialPort.Parity = _parity;
                         _serialPort.DataBits = (int)_dataBits;
-
+                        _serialPort.DtrEnable = _useDTR;
+                        _serialPort.ReadTimeout = _readTimeout;
+                        _serialPort.ReceivedBytesThreshold = _bytesThreshold;
                         // We are not using serialPort.DataReceived event for receiving data since this is not working under Linux/Mono.
                         // We use the readerTask instead (see below).
                         _serialPort.Open();
@@ -305,6 +314,16 @@ namespace SerialPortLib
                 }
             }
             return success;
+        }
+
+        public void SetReadThreshold(int threshold)
+        {
+            _bytesThreshold = threshold;
+        }
+
+        public void SetTimeout(int timeout)
+        {
+            _readTimeout = timeout;
         }
 
         private void Close()
